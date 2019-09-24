@@ -12,7 +12,7 @@ Created on Fri Jun 29 11:29:04 2018
 # Note that this implementation is optimized for readability and not for
 # performance!!!! 
 # 
-# To optimize for performance, the section with smoothing and pemrutation
+# To optimize for performance, the section with smoothing and permutation
 # can be parallelized. 
 
 #==============================================================================
@@ -152,10 +152,8 @@ if __name__ == "__main__":
     # Run statistics
     #==============================================================================
     # Weight the data and extract clusters
-    weighData1 = SF.weighArraysByColumn(smData1, smWeights1)
-    weighDataAv1 = np.nansum(weighData1, axis=0)
-    weighData2 = SF.weighArraysByColumn(smData2, smWeights2)
-    weighDataAv2 = np.nansum(weighData2, axis=0)
+    weighDataAv1 = np.average(smData1, weights = smWeights1, axis=0)
+    weighDataAv2 = np.average(smData2, weights = smWeights2, axis=0)
     
     sigCL, sumTvals = SF.clusterStat_rel(smData1, smData2, smWeights1, smWeights2, sigLevel)
     
@@ -228,7 +226,7 @@ if __name__ == "__main__":
     ax1_1.legend(['KDE_1', 'KDE_2'],loc=4)    
     ax1_1.set_yticks(np.linspace(0,np.max(np.hstack([sTimes1, sTimes2])),3, dtype=int))
     
-    print 'Duration:', time.time() - t
+    print('Duration:', time.time() - t)
 
 
 

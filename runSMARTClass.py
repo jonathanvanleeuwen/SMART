@@ -121,6 +121,6 @@ pairedSamp.runPlot()
 #pairedSamp.permDistr # Clusters in permutations
 #pairedSamp.sigThres # Cluster size threshold
    
-print time.time() - t
+print(time.time() - t)
 
 

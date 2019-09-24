@@ -392,7 +392,7 @@ def permute(x1, y1, x2=None, y2=None, newX=[None], sigma=20, nPerms=1000, baseli
     pWeights2 = np.copy(pData1)
 
     # Run the permutation testing
-    for perm in xrange(nPerms):
+    for perm in range(nPerms):
         # Here we shuffle the conditions
         np.random.shuffle(idx)
         # Split the indexes
@@ -421,13 +421,13 @@ def permute(x1, y1, x2=None, y2=None, newX=[None], sigma=20, nPerms=1000, baseli
 # # Confidence intervals
 #==============================================================================
 #==============================================================================
-def weighSEMOneSample(cond,weights):
+def weighSEMOneSample(performance, weights):
     """
     Calculates the weighted SEM for one sample data along axis 0. 
     
     Parameters
     ----------
-    cond : 2d np.array
+    performance : 2d np.array
         The dependent variable data 
         Dimension 1 = Participant.
         Dimension 2 = The temporal order of the smoothed data
@@ -476,39 +476,33 @@ def weighSEMOneSample(cond,weights):
     [ 0.02702306  0.02806442  0.02913639  0.03023952  0.03137421  0.03254093
       0.0337401   0.03497213  0.03623726  0.03753552]
     """
-    # Number of non nan values per time point
-    N = len(cond) - np.sum(np.isnan(cond), axis = 0) 
-    
-    # get weighted average
-    weighData = weighArraysByColumn(cond, weights)
-    avg = np.nansum(weighData, axis=0)
+    Pi = performance
+    NP = len(Pi) - np.sum(np.isnan(Pi), axis = 0)
+    WN = weights/np.sum(weights, axis = 0)
+    Pw = np.nansum(WN*Pi, axis = 0)
+    SEMw = np.sqrt( (NP/(NP-1.)) * np.nansum(  (WN * (Pi - Pw))**2  ,axis = 0) )    
+    return SEMw
 
-    # Do the rest    
-    sum_of_weights = np.nansum(weights,axis=0)
-    nominator = np.nansum(weights**2 * ((cond - avg)**2),axis=0)
-    SEM = np.sqrt((nominator*N)/((N-1)*sum_of_weights**2))
-    return SEM
-
-def weighSEMPaired(cond1, cond2, weights1, weights2):
+def weighSEMPaired_new(Pa, Wa, Pb, Wb):
     """
     Calculates the weighted SEM for paired samples data along axis 0.
     
     Parameters
     ----------
-    cond1 : 2d np.array
-        The dependent variable data for condition 1
+    Pa : 2d np.array
+        The dependent variable data for condition A
         Dimension 1 = Participant.
         Dimension 2 = The temporal order of the smoothed data
-    cond2 : 2d np.array
-        The dependent variable data for condition 2
+    Wa : 2d np.array
+        The weights for the dependent variable data for condition A
         Dimension 1 = Participant.
         Dimension 2 = The temporal order of the smoothed data
-    weights1 : 2d np.array
-        The weights for the dependent variable data for condition 1
+    Pb : 2d np.array
+        The dependent variable data for condition B
         Dimension 1 = Participant.
         Dimension 2 = The temporal order of the smoothed data
-    weights2 : 2d np.array
-        The weights for the dependent variable data for condition 2
+    Wb : 2d np.array
+        The weights for the dependent variable data for condition B
         Dimension 1 = Participant.
         Dimension 2 = The temporal order of the smoothed data
     
@@ -575,25 +569,28 @@ def weighSEMPaired(cond1, cond2, weights1, weights2):
     [ 0.02328062  0.02607645  0.02907438  0.03225705  0.0356039   0.03909004
       0.04268792  0.04636779  0.05009915  0.05385182]
     """
-    # Normalize weights per columns
-    normW1 = weights1/np.nansum(weights1, axis = 0)
-    normW2 = weights2/np.nansum(weights2, axis = 0)
+    # Determine N for each sample
+    Na = len(Pa) - np.sum(np.isnan(Pa), axis = 0)
+    Nb = len(Pb) - np.sum(np.isnan(Pb), axis = 0)
     
-    # Weighted average
-    weighAv = np.nansum(normW1*cond1 - normW2*cond2, axis = 0)
-    
-    # Determine N
-    N = len(cond1) - np.sum(np.isnan(cond1), axis = 0)
-    N2 = len(cond2) - np.sum(np.isnan(cond2), axis = 0)
-    if np.array(N).shape:
-        N[N2<N] = N2[N2<N]
+    # Get the number of non-nan values
+    if np.array(Na).shape:
+        Na[Nb<Na] = Nb[Nb<Na]
     else:
-        N = np.min([N, N2])
-        
-    # Weighted SEM)       
-    nominator = (np.nansum(normW1*normW2 * (((cond1-cond2) - weighAv)**2),axis=0))/(N-1)
-    SEM = np.sqrt(N*nominator)
-    return SEM
+        Na = np.min([Na, Nb])
+    NP = Na
+    
+    # Normalize weights
+    WaN = Wa/np.sum(Wa, axis = 0)
+    WbN = Wb/np.sum(Wb, axis = 0)
+    
+    # Get difference score and average difference score
+    dP = Pa - Pb
+    dPw = np.nansum( (WaN*Pa) - (WbN*Pb), axis = 0)
+    
+    # Calculate SEM
+    SEMw = np.sqrt( (NP/(NP-1.)) * np.nansum( WaN * WbN *(dP - dPw )**2,axis = 0) )
+    return SEMw
 
 def weighConfOneSample95(cond, weights):
     '''
@@ -654,19 +651,8 @@ def weighConfOneSample95(cond, weights):
     '''            
     # Number of non nan values per time point
     N = len(cond) - np.sum(np.isnan(cond), axis = 0) 
-    
-    # get weighted average
-    weighData = weighArraysByColumn(cond, weights)
-    weighAv = np.nansum(weighData, axis=0)
-
-    # Do the rest    
-    sum_of_weights = np.nansum(weights,axis=0)
-    nominator = np.nansum(weights**2 * ((cond - weighAv)**2),axis=0)
-    sem = np.sqrt((nominator*N)/((N-1)*sum_of_weights**2))
     t_val = scipy.stats.t.ppf(0.975,N-1)
-    confInt95 = t_val * sem
-    return confInt95
-
+    return t_val * weighSEMOneSample(cond, weights)
 
 def weighPairedConf95(cond1, cond2, weights1, weights2):
     '''
@@ -756,14 +742,7 @@ def weighPairedConf95(cond1, cond2, weights1, weights2):
     >>> print confInt95
     [ 0.03231868  0.03619992  0.04036171  0.04477996  0.04942614  0.05426568
       0.05926033  0.06436881  0.06954877  0.07475831]
-    '''                         
-    # Normalize weights per columns
-    normW1 = weights1/np.nansum(weights1, axis = 0)
-    normW2 = weights2/np.nansum(weights2, axis = 0)
-    
-    # Weighted average
-    weighAv = np.nansum(normW1*cond1 - normW2*cond2, axis = 0)
-    
+    '''   
     # Determine N
     N = len(cond1) - np.sum(np.isnan(cond1), axis = 0)
     N2 = len(cond2) - np.sum(np.isnan(cond2), axis = 0)
@@ -773,8 +752,7 @@ def weighPairedConf95(cond1, cond2, weights1, weights2):
         N = np.min([N, N2])
         
     # Weighted SEM)       
-    nominator = (np.nansum(normW1*normW2 * (((cond1-cond2) - weighAv)**2),axis=0))/(N-1)
-    sem = np.sqrt(N*nominator)
+    sem = weighSEMPaired_new(cond1, weights1, cond2, weights2)
     t_val = scipy.stats.t.ppf(0.975,N-1)
     confInt95 = (t_val * sem)/2.
     
@@ -845,20 +823,10 @@ def weighted_ttest(cond, weights, baseline=0):
     [ 0.00044207  0.00054081  0.00066249  0.00081287  0.00099929  0.00123126
       0.00152111  0.00188498  0.00234415  0.00292687]
     ''' 
-    # Normalize weights per columns
-    normW = weights/np.nansum(weights, axis = 0)
-    weighAv = np.nansum(normW*cond, axis = 0)
-
-    # AVB weighted SEM
     N = len(cond) - np.sum(np.isnan(cond), axis = 0)
-        
-    sum_of_weights = np.nansum(weights,axis=0)
-    nominator = (np.nansum(weights**2 * ((cond - weighAv)**2),axis=0))/(N-1)
-    sem = np.sqrt(N*nominator/(sum_of_weights**2))
-
-    tvals = (weighAv-baseline)/sem
+    weighAv = np.average(cond, axis = 0, weights = weights)
+    tvals = (weighAv-baseline)/weighSEMOneSample(cond, weights)
     pvals = scipy.stats.t.sf(np.abs(tvals), N-1)*2
-
     return tvals, pvals
 
 
@@ -953,11 +921,8 @@ def weighted_ttest_rel(cond1, cond2, weights1, weights2):
     [ 0.00000697  0.00001176  0.00001961  0.00003225  0.00005226  0.00008343
       0.00013115  0.00020301  0.00030947  0.00046464]
     ''' 
-    # Normalize weights per columns
-    normW1 = weights1/np.nansum(weights1, axis = 0)
-    normW2 = weights2/np.nansum(weights2, axis = 0)
-    
-    weighAv = np.nansum(normW1*cond1 - normW2*cond2, axis = 0)
+    # get average difference
+    weighAv = np.average(cond1,axis=0, weights=weights1) - np.average(cond2,axis=0, weights=weights2)
 
     # Determine N
     N = len(cond1) - np.sum(np.isnan(cond1), axis = 0)
@@ -967,10 +932,8 @@ def weighted_ttest_rel(cond1, cond2, weights1, weights2):
     else:
         N = np.min([N, N2])
         
-    # Weighted SEM      
-    nominator = (np.nansum(normW1*normW2 * (((cond1-cond2) - weighAv)**2),axis=0))/(N-1)
-    sem = np.sqrt(N*nominator)
-      
+    # Weighted SEM          
+    sem = weighSEMPaired_new(cond1, weights1, cond2, weights2)
     tvals = weighAv/sem
     pvals = scipy.stats.t.sf(np.abs(tvals), N-1)*2
 
@@ -1328,7 +1291,7 @@ def permuteClusterStat(perm1, perm2, permWeights1, permWeights2, sigThresh=0.05)
     tValues, pValues = weighted_ttest_rel(perm1, perm2, permWeights1, permWeights2)
     tValues = tValues.transpose()
     sigArr = (pValues<0.05).transpose()
-    for indx in xrange(len(perm1[0,0,:])):
+    for indx in range(len(perm1[0,0,:])):
         cl, clInd= getCluster(sigArr[indx,:])
         sigCl = [clInd[i] for i in range(len(cl)) if cl[i][0] == True]
         if len(sigCl)  != 0:
@@ -1336,87 +1299,3 @@ def permuteClusterStat(perm1, perm2, permWeights1, permWeights2, sigThresh=0.05)
         else:
             permDistr.append(np.max(tValues[indx,:]))
     return np.array(permDistr)
-
-#==============================================================================
-# Weighted averaging
-#==============================================================================
-def weighArraysByColumn(arr,weights):
-    '''
-    Normalizes a 2d array by columns, based on weights. 
-    To get the weighted average for each column, sum the 
-    columns after weighting. 
-    
-    Parameters
-    ----------
-    arr : 2d np.array
-        The data which is normalized.
-    weights: 2d np.array
-        The weights used for normalizing, needs to have the same shape
-        as "arr".
-    
-    Returns
-    -------
-    normArr : 2d np.array
-        The normalized "arr". Same shape as "arr"
-    
-    Example
-    --------
-    >>> import numpy as np
-    >>> import SMART_Funcs as SF
-    >>> arr = np.array(
-        [[ 0.22943939,  0.23401153,  0.23875737, ...,  1.        ,
-             1.        ,  1.        ],
-           [ 0.        ,  0.        ,  0.        , ...,  0.81981527,
-             0.8366141 ,  0.85237319],
-           [ 0.95921204,  0.95660974,  0.95386013, ...,  1.        ,
-             1.        ,  1.        ],
-           ..., 
-           [ 1.        ,  1.        ,  1.        , ...,  0.47581884,
-             0.45721023,  0.43872852],
-           [ 0.        ,  0.        ,  0.        , ...,  0.99127637,
-             0.99273883,  0.99397951],
-           [ 0.        ,  0.        ,  0.        , ...,  0.99095718,
-             0.99235874,  0.99355518]]
-        )
-    >>> weights = np.array(
-        [[ 0.08644327,  0.11422464,  0.14951155, ...,  0.        ,
-             0.        ,  0.        ],
-           [ 0.        ,  0.        ,  0.        , ...,  2.90022687,
-             2.70848172,  2.51371212],
-           [ 0.0003915 ,  0.0005859 ,  0.00086848, ...,  0.00000027,
-             0.00000015,  0.00000009],
-           ..., 
-           [ 0.        ,  0.        ,  0.        , ...,  5.07032017,
-             4.72609983,  4.37761619],
-           [ 0.        ,  0.        ,  0.        , ...,  2.99432885,
-             2.73249363,  2.47833496],
-           [ 0.        ,  0.        ,  0.        , ...,  0.4774884 ,
-             0.40421552,  0.33941827]]
-            )
-    >>> normArr = SF.weighArraysByColumn(arr,weights)
-    >>> print normArr
-        [[ 0.10741057,  0.13499765,  0.16002967, ...,  0.        ,
-             0.        ,  0.        ],
-           [ 0.        ,  0.        ,  0.        , ...,  0.08438178,
-             0.08640918,  0.08827929],
-           [ 0.00203373,  0.00283068,  0.00371374, ...,  0.00000001,
-             0.00000001,  0.        ],
-           ..., 
-           [ 0.        ,  0.        ,  0.        , ...,  0.08562049,
-             0.08240008,  0.07913107],
-           [ 0.        ,  0.        ,  0.        , ...,  0.1053404 ,
-             0.10344344,  0.10149647],
-           [ 0.        ,  0.        ,  0.        , ...,  0.01679262,
-             0.01529644,  0.01389443]]
-    >>> print np.nansum(normArr, axis = 0)
-        [ 0.11057397  0.13944324  0.16591998  0.1881932   0.20596189  0.21991098
-      0.23105844  0.24035454  0.24853831  0.2561338   0.263495    0.270855
-      0.27836514  0.28612222  0.29418592  0.30258936  0.31134505  0.32044783
-      0.32987611  0.3395921   0.3495418   0.359655    0.36984588  ....]
-    ''' 
-    # normalize weights
-    weightsN = weights/np.nansum(weights, axis = 0)
-    # Get normalized values (add columns to get the weighted average)
-    normArr = arr * weightsN
-    return normArr
-

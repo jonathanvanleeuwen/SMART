@@ -12,7 +12,7 @@ Created on Fri Jun 29 11:29:04 2018
 # Note that this implementation is optimized for readability and not for
 # performance!!!!
 #
-# To optimize for performance, the section with smoothing and pemrutation
+# To optimize for performance, the section with smoothing and permutation
 # can be parallelized.
 
 #==============================================================================
@@ -129,17 +129,16 @@ for i in range(nPP):
 # Run statistics
 #==============================================================================
 # Weight the data and extract clusters
-weighData = SF.weighArraysByColumn(smData, smWeights)
-weighDataAv = np.nansum(weighData, axis=0)
+weighDataAv = np.average(smData, weights=smWeights, axis = 0)
 sigCL, sumTvals = SF.clusterStat_oneSamp(smData, smWeights, baseline, sigLevel)
 # Calculate 95 confidence intervals
 conf95 = SF.weighConfOneSample95(smData, smWeights)
 
 # Do cluster stats for the permutations 
 permDistr = SF.permuteClusterStat(permD1, permD2, permW1, permW2, sigLevel)
-# determine the 95th percentile threshold
+# Determine the 95th percentile threshold
 sigThres = np.percentile(permDistr, 100-(sigLevel*100))
-
+          
 #==============================================================================
 # Plot data
 #==============================================================================
@@ -197,7 +196,7 @@ ax1_1.set_ylim(0, maxT)
 ax1_1.legend(['KDE'],loc=4)    
 ax1_1.set_yticks(np.linspace(0,np.max(sTimes),3, dtype=int))
 
-print 'Duration:', time.time() - t
+print('Duration:', time.time() - t)
 
                             
                             

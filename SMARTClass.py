@@ -133,8 +133,7 @@ class SMART:
             times = self.data[self.t1][i]
             self.smooth_dv1[i, :], self.weights_dv1[i,:] = SF.gaussSmooth(times, depV, self.timeVect, self.krnSize)    
         # Weigh the data
-        self.weighDv1 = SF.weighArraysByColumn(self.smooth_dv1, self.weights_dv1)
-        self.weighDv1Average = np.nansum(self.weighDv1, axis=0)
+        self.weighDv1Average = np.average(self.smooth_dv1, weights = self.weights_dv1, axis=0)
         
     def __oneSampPerm__(self):
         # Run one samp pemrutation
@@ -157,7 +156,6 @@ class SMART:
         self.sigCL, self.sumTvals = SF.clusterStat_oneSamp(self.smooth_dv1, self.weights_dv1, self.baseline, self.sigLevel)
 
         # Calculate permutation distributions and significance thresholds
-        self.weighPerm1 = SF.weighArraysByColumn(self.permData1, self.permWeight1)
         self.permDistr = SF.permuteClusterStat(self.permData1, self.permData2, self.permWeight1, self.permWeight2, self.sigLevel)
         self.sigThres = np.percentile(self.permDistr, 100-(self.sigLevel*100))
         
@@ -229,10 +227,8 @@ class SMART:
             self.smooth_dv2[i, :], self.weights_dv2[i,:] = SF.gaussSmooth(times2, depV2, self.timeVect, self.krnSize)
 
         # Weigh the data 
-        self.weighDv1 = SF.weighArraysByColumn(self.smooth_dv1, self.weights_dv1)
-        self.weighDv1Average = np.nansum(self.weighDv1, axis=0)
-        self.weighDv2 = SF.weighArraysByColumn(self.smooth_dv2, self.weights_dv2)
-        self.weighDv2Average = np.nansum(self.weighDv2, axis=0)
+        self.weighDv1Average = np.average(self.smooth_dv1, weights = self.weights_dv1, axis=0)
+        self.weighDv2Average = np.average(self.smooth_dv2, weights = self.weights_dv2, axis=0)
     
     def __twoSampPerm__(self):
         for i in range(self.nPP):
