@@ -71,7 +71,7 @@ t = time.time()
 # # Define parameters (Make changes here)
 #==============================================================================
 # File params
-dataFile = 'ExampleDataSMART.csv'
+dataFile = 'ExampleDataSMART' # Exclude the extension, it will infere extension
 dataFormat = 'long' # 'long' or 'short' # See instructions above
 
 # If short format
@@ -131,11 +131,11 @@ timeVect = np.arange(timeMin, timeMax, stepSize, dtype=float)
 
 # Load data based on format
 if dataFormat == 'short':
-    data = pd.read_pickle(dataFile)
+    data = pd.read_pickle(dataFile+'.p')
     nPP = len(data)
     allTimes = np.hstack(data[timeVar])
 elif dataFormat == 'long':
-    data = pd.read_csv(dataFile)
+    data = pd.read_csv(dataFile+'.csv')
     pp = np.unique(data[participantColumn])
     nPP = len(pp)
     condBool = data[conditionColumn].values == conditionLabel
@@ -163,7 +163,7 @@ for i in range(nPP):
     if dataFormat == 'short': 
         times = data[timeVar][i]
         depV = data[depVar][i]
-    else:
+    elif dataFormat == 'long':
         ppBool = data[participantColumn].values == pp[i]
         dataBool = np.logical_and(condBool, ppBool)
         times = data[timeVarColumn][dataBool].values

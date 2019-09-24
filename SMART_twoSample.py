@@ -16,6 +16,9 @@ Created on Fri Jun 29 11:29:04 2018
 # can be parallelized. 
 
 #==============================================================================
+#
+# Short format data
+#
 # Assumes that the data is in a pickle file and structered identical to 
 # 'ExampleDataSMUG.p'.
 # 
@@ -32,7 +35,36 @@ Created on Fri Jun 29 11:29:04 2018
 #           1	    [379 312 272 ..., 278 288 267]	    [1 1 1 ..., 0 1 1]	    [386 437 422 ..., 226 319 237]	    [1 1 1 ..., 1 1 0]
 #           2	    [192 208 236 ..., 175 268 171]	    [0 0 0 ..., 0 0 0]	    [180 227 189 ..., 172 180 205]	    [1 1 1 ..., 1 1 1]
 #           3	    [397 291 412 ..., 457 408 366]	    [1 1 1 ..., 1 1 1]	    [392 452 459 ..., 378 342 444]	    [1 1 0 ..., 1 1 1]
-
+#
+#==============================================================================
+# Long format data
+#
+# Assumes that the data is in a comma sepperated file, .csv and structered identical to
+# File should include a header for each column. (in this example there are 2
+# conditions logged in the file)
+# 'ExampleDataSMUG.csv'.
+#
+# A pandas dataframe with:
+#       Each trial in its own row
+#       One columns with participant number
+#       One column with the time variable
+#       One column with the dependent variable 
+#       One column with the condition label
+#
+# Example:
+#         Index     participantNr       TimeVar         DepVar      Condition
+#           0	          1               155             0             1
+#           1	          1               192             0             1
+#           3	          1               279             1             1
+#           .	          .                 .             .             .
+#           700           3               180             1             2
+#           701           3               211             0             2
+#           702           3               182             1             2
+#           .	          .                 .             .             .
+#           2005         10               475             1             1 
+#           2006         10               437             1             1
+#           2007         10               402             1             1
+#
 #==============================================================================
 import time
 t = time.time()
@@ -40,7 +72,11 @@ t = time.time()
 # # Define parameters (Make changes here)
 #==============================================================================
 # File params
-dataFile = 'ExampleDataSMART.p' 
+dataFile = 'ExampleDataSMART' # Exclude the extension, it will infere extension
+dataFormat = 'long' # 'long' or 'short' # See instructions above
+
+###
+# If short format
 # Variable of interest 1
 timeVar1 = 'TimeVar1' # The name of the column with he time variables in dataFile
 depVar1 = 'DepVar1' # The name of the column with he depVar variables in dataFile
@@ -49,6 +85,13 @@ depVar1 = 'DepVar1' # The name of the column with he depVar variables in dataFil
 timeVar2 = 'TimeVar2' # The name of the column with he time variables in dataFile
 depVar2 = 'DepVar2' # The name of the column with he depVar variables in dataFile
 
+###
+# If long format
+participantColumn = 'participantNr'
+timeVarColumn = 'TimeVar'
+depVarColumn = 'DepVar'
+conditionColumn = 'Condition' 
+conditionLabel = [1, 2] # The value for the two conditions we are interested in, in the condition column
 
 # Smoothing params
 kernelSize = 10
@@ -76,8 +119,6 @@ histRes = 100 # number of bars for permutation distribution
 
 
 
-
-
 #==============================================================================
 #==============================================================================
 # # Everything after this should not need to be changed!!!!!!!!
@@ -97,10 +138,23 @@ plt.close('all')
 #==============================================================================
 # Load data and initiate vectors
 #==============================================================================
-data = pd.read_pickle(dataFile)
 timeVect = np.arange(timeMin, timeMax, stepSize, dtype=float)
-nPP = len(data)
 
+# Load data based on format
+if dataFormat == 'short':
+    data = pd.read_pickle(dataFile+'.p')
+    nPP = len(data)
+    allTimes1 = np.hstack(data[timeVar1])
+    allTimes2 = np.hstack(data[timeVar2])
+elif dataFormat == 'long':
+    data = pd.read_csv(dataFile+'.csv')
+    pp = np.unique(data[participantColumn])
+    nPP = len(pp)
+    condBool1 = data[conditionColumn].values == conditionLabel[0]
+    condBool2 = data[conditionColumn].values == conditionLabel[1]
+    allTimes1 = data[timeVarColumn].values[condBool1]
+    allTimes2 = data[timeVarColumn].values[condBool2]
+    
 #==============================================================================
 # Prealocate and initiate data structures
 #==============================================================================
@@ -121,12 +175,21 @@ permWeight2 = np.zeros((nPP, len(timeVect), nPerms))
 # * This part can be parallelized for speed if required *
 #==============================================================================
 for i in range(nPP):
-    #  Extract data for participant
-    times1 = data[timeVar1][i]
-    depV1 = data[depVar1][i]
-    times2 = data[timeVar2][i]
-    depV2 = data[depVar2][i]
-
+    #  Extract data for participant based on data format
+    if dataFormat == 'short': 
+        times1 = data[timeVar1][i]
+        depV1 = data[depVar1][i]
+        times2 = data[timeVar2][i]
+        depV2 = data[depVar2][i]
+    elif dataFormat == 'long': 
+        ppBool = data[participantColumn].values == pp[i]
+        dataBool1 = np.logical_and(condBool1, ppBool)
+        dataBool2 = np.logical_and(condBool2, ppBool)
+        times1 = data[timeVarColumn][dataBool1].values
+        depV1 = data[depVarColumn][dataBool1].values
+        times2 = data[timeVarColumn][dataBool2].values
+        depV2 = data[depVarColumn][dataBool2].values
+        
     # Run Smoothing
     smData1[i, :], smWeights1[i,:] = SF.gaussSmooth(times1, depV1, timeVect, kernelSize)
     smData2[i, :], smWeights2[i,:] = SF.gaussSmooth(times2, depV2, timeVect, kernelSize)
@@ -200,8 +263,8 @@ ax2.set_ylabel("Frequency (log)", size=yLabelSize)
 ax2.set_yscale('log')
 
 # Plot kernel density estimation KDE
-sTimes1, unqT1, countT1 = SF.getKDE(np.hstack(data[timeVar1]),timeVect, kernelSize)
-sTimes2, unqT2, countT2 = SF.getKDE(np.hstack(data[timeVar2]),timeVect, kernelSize)
+sTimes1, unqT1, countT1 = SF.getKDE(allTimes1,timeVect, kernelSize)
+sTimes2, unqT2, countT2 = SF.getKDE(allTimes2,timeVect, kernelSize)
 maxT = np.max(np.hstack([sTimes1, sTimes2]))*8
 ax1_1 = ax1.twinx()
 ax1_1.plot(timeVect, sTimes1, '--k', alpha = 0.6)
