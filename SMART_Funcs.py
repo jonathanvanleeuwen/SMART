@@ -939,6 +939,124 @@ def weighted_ttest_rel(cond1, cond2, weights1, weights2):
 
     return tvals, pvals
 
+def weighted_ttest_ind(cond1, cond2, weights1, weights2):
+    '''
+    Perform an independent sample t-test along the zero axis. Assumes equal variance and same N 
+    Note: this function is in development and has not been tested with a 
+    boostrapping procedure 
+    
+    Parameters
+    ----------
+    cond1 : 2d np.array
+        The dependent variable data for condition 1
+        Dimension 1 = Participant.
+        Dimension 2 = The temporal order of the smoothed data
+    cond2 : 2d np.array
+        The dependent variable data for condition 2
+        Dimension 1 = Participant.
+        Dimension 2 = The temporal order of the smoothed data
+    weights1 : 2d np.array
+        The weights for the dependent variable data for condition 1
+        Dimension 1 = Participant.
+        Dimension 2 = The temporal order of the smoothed data
+    weights2 : 2d np.array
+        The weights for the dependent variable data for condition 2
+        Dimension 1 = Participant.
+        Dimension 2 = The temporal order of the smoothed data
+    
+    Returns
+    -------
+    tvals : np.array
+        The t-value for each time point
+    pvals : np.array
+        The p-value for each time point
+        
+    Example
+    --------
+    >>> import numpy as np
+    >>> import SMART_Funcs as SF
+    >>> 
+    >>> cond1 = np.array(
+          [[ 0.22943939,  0.23401153,  0.23875737,  0.24369002,  0.24882374,
+             0.25417401,  0.25975754,  0.26559225,  0.27169717,  0.27809231],
+           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.95921204,  0.95660974,  0.95386013,  0.95095699,  0.94789409,
+             0.94466517,  0.94126402,  0.93768446,  0.93392041,  0.92996589],
+           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.0050039 ,  0.00575406,  0.00661525,  0.0076034 ,  0.00873658,
+             0.01003521,  0.01152231,  0.01322375,  0.0151685 ,  0.01738882]]
+           )
+    >>> cond2 = np.array(
+          [[ 0.94682624,  0.94048727,  0.93355617,  0.92602112,  0.91788159,
+             0.90915058,  0.89985671,  0.89004574,  0.87978133,  0.8691449 ],
+           [ 1.        ,  1.        ,  1.        ,  1.        ,  1.        ,
+             1.        ,  1.        ,  1.        ,  1.        ,  1.        ],
+           [ 0.00000366,  0.00000488,  0.00000652,  0.0000087 ,  0.00001161,
+             0.0000155 ,  0.00002071,  0.00002767,  0.000037  ,  0.00004947],
+           [ 1.        ,  1.        ,  1.        ,  1.        ,  1.        ,
+             1.        ,  1.        ,  1.        ,  1.        ,  1.        ],
+           [ 0.99999866,  0.99999827,  0.99999776,  0.9999971 ,  0.99999624,
+             0.99999513,  0.9999937 ,  0.99999185,  0.99998946,  0.99998637]]
+           )
+    >>> weights1 = np.array(
+          [[ 0.08644327,  0.11422464,  0.14951155,  0.19386571,  0.24903863,
+             0.31695961,  0.39971352,  0.499508  ,  0.61863016,  0.75939376],
+           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.0003915 ,  0.0005859 ,  0.00086848,  0.00127506,  0.0018542 ,
+             0.00267079,  0.00381058,  0.00538539,  0.00753925,  0.0104552 ],
+           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.00845718,  0.01151475,  0.01552811,  0.02074147,  0.02744353,
+             0.03597045,  0.04670741,  0.06008859,  0.07659494,  0.09674976]]
+           )
+    >>> weights2 = np.array(
+          [[ 0.1061835 ,  0.13486507,  0.17010619,  0.21313444,  0.26536263,
+             0.32841358,  0.40414825,  0.49469664,  0.6024907 ,  0.73029753],
+           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.00308873,  0.00431787,  0.00597608,  0.0081888 ,  0.01110918,
+             0.01492111,  0.01984166,  0.02612241,  0.03404919,  0.04393993],
+           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.00050288,  0.00074004,  0.00107842,  0.00155623,  0.00222394,
+             0.00314738,  0.00441136,  0.00612366,  0.00841953,  0.0114664 ]]
+           )
+    >>> tvals, pvals = SF.weighted_ttest_rel(cond1, cond2, weights1, weights2)
+    >>> print tvals
+    [-30.40771082 -26.66094401 -23.44662594 -20.68789375 -18.31655524
+     -16.27421729 -14.51085133 -12.98410269 -11.65816583 -10.50288769]
+    >>> print pvals
+    [ 0.00000697  0.00001176  0.00001961  0.00003225  0.00005226  0.00008343
+      0.00013115  0.00020301  0.00030947  0.00046464]
+    ''' 
+    # get average difference
+    weighAv = np.average(cond1,axis=0, weights=weights1) - np.average(cond2,axis=0, weights=weights2)
+
+    # Determine N
+    N = len(cond1) - np.sum(np.isnan(cond1), axis = 0)
+    N2 = len(cond2) - np.sum(np.isnan(cond2), axis = 0)
+    if np.array(N).shape:
+        N[N2<N] = N2[N2<N]
+    else:
+        N = np.min([N, N2])
+   
+    
+    # compute pooled variance and sem assuming equal sample size and variance for cond1 and cond2
+    sem1 = weighSEMOneSample(cond1, weights1)
+    sem2 = weighSEMOneSample(cond2, weights2)
+    sem_pooled = np.sqrt((sem1 **2) + (sem2 **2))
+    
+    # compute t-values and p-values
+    tvals = weighAv/sem_pooled
+    pvals = scipy.stats.t.sf(np.abs(tvals), 2*N-2)*2 # dfs for pooled variance
+
+    return tvals, pvals
+
+
+
 #==============================================================================
 # Get clusters
 #==============================================================================
@@ -1299,3 +1417,5 @@ def permuteClusterStat(perm1, perm2, permWeights1, permWeights2, sigThresh=0.05)
         else:
             permDistr.append(np.max(tValues[indx,:]))
     return np.array(permDistr)
+
+
